@@ -39,15 +39,7 @@ class ProjectTest extends TestCase
         $attributes = factory('App\Project')->raw(['description' => '']);
         $this->post('/projects', $attributes)->assertSessionHasErrors('description');
     }
-    /** @test */
-    public function a_user_can_view_a_project()
-    {
-        $this->withoutExceptionHandling();
-        $project = factory('App\Project')->create();
-        $this->get('/projects/' . $project->id)
-            ->assertSee($project->title)
-            ->assertSee($project->description);
-    }
+
     /** @test */
     public function a_project_requires_an_owner()
     {
@@ -56,4 +48,32 @@ class ProjectTest extends TestCase
         $this->post('/projects', $attributes)->assertRedirect('login');
     }
 
+    /** @test */
+    public function guest_may_not_view_projects()
+    {
+        $this->get('/projects')->assertRedirect('login');
+    }
+    /** @test */
+    public function guest_cannot_view_a_single_project()
+    {
+        $project = factory('App\Project')->create();
+        $this->get($project->path())->assertRedirect('login');
+    }
+    /** @test */
+    public function a_user_can_view_their_project()
+    {
+        $this->be(factory('App\User')->create());
+        $this->withoutExceptionHandling();
+        $project = factory('App\Project')->create(['owner_id' => auth()->id() ]);
+        $this->get($project->path())
+              ->assertSee($project->title)
+              ->assertSee($project->description);
+    }
+
+        /** @test */
+    public function it_belongs_to_an_owner()
+    {
+        $project = factory('App\Project')->create();
+        $this->assertInstanceOf('App\User', $project->owner);
+    }
 }
